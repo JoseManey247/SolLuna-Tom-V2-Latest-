@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/filter_dialog.dart';
 import '../models/product.dart';
+import '../services/product_service.dart';
 
 class CatalogoScreen extends StatefulWidget {
   const CatalogoScreen({super.key});
@@ -10,6 +11,21 @@ class CatalogoScreen extends StatefulWidget {
 }
 
 class _CatalogoScreenState extends State<CatalogoScreen> {
+  final ProductService _productService = ProductService();
+  late Future<List<Product>> _productsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshProducts();
+  }
+
+  void _refreshProducts() {
+    setState(() {
+      _productsFuture = _productService.getProducts();
+    });
+  }
+
   void _showFilter(BuildContext context) {
     showDialog(
       context: context,
@@ -47,21 +63,38 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
           ),
           const SizedBox(height: 32),
           Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                int crossAxisCount = constraints.maxWidth > 700 ? 2 : 1;
-                double aspectRatio = constraints.maxWidth > 700 ? 1.5 : 3.2;
-                
-                return GridView.builder(
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    childAspectRatio: aspectRatio,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                  ),
-                  itemCount: mockProducts.length,
-                  itemBuilder: (context, index) {
-                    return _buildProductCard(context, mockProducts[index]);
+            child: FutureBuilder<List<Product>>(
+              future: _productsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C)));
+                } else if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No hay productos disponibles.'));
+                }
+
+                final products = snapshot.data!;
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    int crossAxisCount = constraints.maxWidth > 700 ? 2 : 1;
+                    double aspectRatio = constraints.maxWidth > 700 ? 1.5 : 3.2;
+                    
+                    return RefreshIndicator(
+                      onRefresh: () async => _refreshProducts(),
+                      child: GridView.builder(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          childAspectRatio: aspectRatio,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                        ),
+                        itemCount: products.length,
+                        itemBuilder: (context, index) {
+                          return _buildProductCard(context, products[index]);
+                        },
+                      ),
+                    );
                   },
                 );
               },
@@ -138,7 +171,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
           padding: const EdgeInsets.all(12.0),
           child: Row(
             children: [
-              // Product Image
               Container(
                 width: 100,
                 height: 100,
@@ -148,7 +180,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(15),
-                  child: Image.asset(
+                  child: Image.network(
                     product.imagePath,
                     fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) => const Icon(
@@ -160,7 +192,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-              // Product Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -222,7 +253,6 @@ class ProductDetailView extends StatelessWidget {
           ),
           child: Column(
             children: [
-              // Header with back button
               Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
@@ -241,7 +271,7 @@ class ProductDetailView extends StatelessWidget {
                       style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C)),
                     ),
                     const Spacer(),
-                    const SizedBox(width: 48), // Balancing the back button
+                    const SizedBox(width: 48),
                   ],
                 ),
               ),
@@ -250,7 +280,6 @@ class ProductDetailView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
                   child: Column(
                     children: [
-                      // Product Image
                       Container(
                         height: 250,
                         width: double.infinity,
@@ -266,14 +295,14 @@ class ProductDetailView extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
-                          child: Image.asset(
+                          child: Image.network(
                             product.imagePath,
                             fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.spa, size: 100, color: Color(0xFF8B5E3C)),
                           ),
                         ),
                       ),
                       const SizedBox(height: 32),
-                      // Details
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -348,7 +377,6 @@ class ProductDetailView extends StatelessWidget {
   }
 }
 
-// Utility to show detail page as a popup
 void showGeneralPage({required BuildContext context, required Widget Function(BuildContext, Animation<double>, Animation<double>) pageBuilder}) {
   showGeneralDialog(
     context: context,

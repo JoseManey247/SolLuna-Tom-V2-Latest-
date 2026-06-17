@@ -1,13 +1,133 @@
 import 'package:flutter/material.dart';
 import '../widgets/filter_dialog.dart';
+import '../services/product_service.dart';
+import '../models/product.dart';
 
-class InventarioProductosScreen extends StatelessWidget {
+class InventarioProductosScreen extends StatefulWidget {
   const InventarioProductosScreen({super.key});
+
+  @override
+  State<InventarioProductosScreen> createState() => _InventarioProductosScreenState();
+}
+
+class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
+  final ProductService _productService = ProductService();
+  late Stream<List<Product>> _productsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _productsStream = _productService.getProductsStream();
+  }
 
   void _showFilter(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => const FilterDialog(type: FilterType.inventoryProducts),
+    );
+  }
+
+  Future<void> _confirmDelete(Product product) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmar Eliminación'),
+        content: Text('¿Estás seguro de que deseas eliminar "${product.nombre}"? Esta acción no se puede deshacer.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Eliminar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true && product.id != null) {
+      try {
+        await _productService.deleteProduct(product.id!);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Producto eliminado con éxito'), backgroundColor: Colors.green),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al eliminar: $e'), backgroundColor: Colors.red),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showEditDialog(Product product) async {
+    final nombreController = TextEditingController(text: product.nombre);
+    final categoriaController = TextEditingController(text: product.categoria);
+    final stockController = TextEditingController(text: product.stock.toString());
+    final precioController = TextEditingController(text: product.valor.toString());
+    final descripcionController = TextEditingController(text: product.descripcion);
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar Producto'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(controller: nombreController, decoration: const InputDecoration(labelText: 'Nombre')),
+              TextField(controller: categoriaController, decoration: const InputDecoration(labelText: 'Categoría')),
+              TextField(controller: stockController, decoration: const InputDecoration(labelText: 'Stock'), keyboardType: TextInputType.number),
+              TextField(controller: precioController, decoration: const InputDecoration(labelText: 'Precio de Venta'), keyboardType: TextInputType.number),
+              TextField(
+                controller: descripcionController,
+                decoration: const InputDecoration(labelText: 'Descripción'),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancelar')),
+          ElevatedButton(
+            onPressed: () async {
+              final updatedProduct = Product(
+                id: product.id,
+                nombre: nombreController.text,
+                categoria: categoriaController.text,
+                stock: int.tryParse(stockController.text) ?? product.stock,
+                valor: int.tryParse(precioController.text) ?? product.valor,
+                descripcion: descripcionController.text,
+                imagePath: product.imagePath,
+                peso: product.peso,
+              );
+              
+              try {
+                await _productService.updateProduct(updatedProduct);
+                if (mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Producto actualizado'), backgroundColor: Colors.green),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al actualizar: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5E3C), foregroundColor: Colors.white),
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -45,13 +165,35 @@ class InventarioProductosScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: ListView(
-              children: [
-                _buildInventoryItem('1', 'Crema Urea al 20%', 'Cremas', '28 U', null),
-                _buildInventoryItem('2', 'Aceite de Cannabis', 'Aceites', '12 U', 'Por agotar'),
-                _buildInventoryItem('3', 'Jabón Carbón Activado', 'Jabones', '0 U', '¡Sin Stock!'),
-                _buildInventoryItem('4', 'Agua de Florida', 'Colonias', '5 U', 'Por agotar'),
-              ],
+            child: StreamBuilder<List<Product>>(
+              stream: _productsStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C)));
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text('Error al cargar productos: ${snapshot.error}'),
+                      ],
+                    ),
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No hay productos en el inventario.'));
+                }
+
+                final products = snapshot.data!;
+                return ListView.builder(
+                  itemCount: products.length,
+                  itemBuilder: (context, index) {
+                    final product = products[index];
+                    return _buildInventoryItem(product);
+                  },
+                );
+              },
             ),
           ),
         ],
@@ -107,7 +249,9 @@ class InventarioProductosScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInventoryItem(String id, String name, String category, String stock, String? alert) {
+  Widget _buildInventoryItem(Product product) {
+    final alert = product.stock <= 5 ? (product.stock == 0 ? '¡Sin Stock!' : 'Por agotar') : null;
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
@@ -122,14 +266,14 @@ class InventarioProductosScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(color: const Color(0xFF8B5E3C).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Text('ID: $id', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C), fontSize: 12)),
+                  child: Text('ID: ${product.id}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C), fontSize: 12)),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4E342E)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  child: Text(product.nombre, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4E342E)), maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.edit_outlined, color: Colors.orange, size: 20)),
-                IconButton(onPressed: () {}, icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20)),
+                IconButton(onPressed: () => _showEditDialog(product), icon: const Icon(Icons.edit_outlined, color: Colors.orange, size: 20)),
+                IconButton(onPressed: () => _confirmDelete(product), icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20)),
               ],
             ),
             const Divider(height: 20),
@@ -140,14 +284,14 @@ class InventarioProductosScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Categoría', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
-                    Text(category, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    Text(product.categoria, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                   ],
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Stock Actual', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
-                    Text(stock, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF8B5E3C))),
+                    Text('${product.stock} U', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF8B5E3C))),
                   ],
                 ),
                 if (alert != null)

@@ -1,8 +1,30 @@
 import 'package:flutter/material.dart';
 import '../widgets/filter_dialog.dart';
+import '../services/ingredient_service.dart';
+import '../models/ingredient.dart';
 
-class InventarioIngredientesScreen extends StatelessWidget {
+class InventarioIngredientesScreen extends StatefulWidget {
   const InventarioIngredientesScreen({super.key});
+
+  @override
+  State<InventarioIngredientesScreen> createState() => _InventarioIngredientesScreenState();
+}
+
+class _InventarioIngredientesScreenState extends State<InventarioIngredientesScreen> {
+  final IngredientService _ingredientService = IngredientService();
+  late Future<List<Ingredient>> _ingredientsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshIngredients();
+  }
+
+  void _refreshIngredients() {
+    setState(() {
+      _ingredientsFuture = _ingredientService.getIngredients();
+    });
+  }
 
   void _showFilter(BuildContext context) {
     showDialog(
@@ -45,12 +67,45 @@ class InventarioIngredientesScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Expanded(
-            child: ListView(
-              children: [
-                _buildIngredientItem('1', 'Emulpharma', 'Emulsionante', '28 U', null),
-                _buildIngredientItem('2', 'Glicerina', 'Activos', '12 U', 'Por agotar'),
-                _buildIngredientItem('3', 'Plantas de orégano', 'Activos', '0 U', '¡Sin Stock!'),
-              ],
+            child: FutureBuilder<List<Ingredient>>(
+              future: _ingredientsFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C)));
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text('Error al cargar insumos: ${snapshot.error}'),
+                        TextButton(onPressed: _refreshIngredients, child: const Text('Reintentar')),
+                      ],
+                    ),
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(child: Text('No hay ingredientes en el inventario.'));
+                }
+
+                final ingredients = snapshot.data!;
+                return RefreshIndicator(
+                  onRefresh: () async => _refreshIngredients(),
+                  child: ListView.builder(
+                    itemCount: ingredients.length,
+                    itemBuilder: (context, index) {
+                      final ingredient = ingredients[index];
+                      return _buildIngredientItem(
+                        ingredient.id.toString(),
+                        ingredient.nombre,
+                        ingredient.categoria,
+                        '${ingredient.cantidadRestante} ${ingredient.unidadMedida}',
+                        ingredient.cantidadRestante <= ingredient.alertaStockBajo ? (ingredient.cantidadRestante == 0 ? '¡Sin Stock!' : 'Por agotar') : null,
+                      );
+                    },
+                  ),
+                );
+              },
             ),
           ),
         ],

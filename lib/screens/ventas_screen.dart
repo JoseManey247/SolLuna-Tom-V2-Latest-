@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/product.dart';
+import '../models/sale_record_model.dart';
+import '../services/product_service.dart';
+import '../services/sales_service.dart';
 import 'package:intl/intl.dart';
 
 class VentasScreen extends StatefulWidget {
@@ -11,15 +14,37 @@ class VentasScreen extends StatefulWidget {
 
 class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final ProductService _productService = ProductService();
+  final SalesService _salesService = SalesService();
+
   final List<SaleItem> _currentSaleItems = [SaleItem()];
-  final List<SaleRecord> _salesHistory = []; // Local history for demo
-  
+  List<Product> _availableProducts = [];
+  bool _isLoadingProducts = true;
+
   DateTimeRange? _selectedDateRange;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _loadProducts();
+  }
+
+  Future<void> _loadProducts() async {
+    try {
+      final products = await _productService.getProducts();
+      setState(() {
+        _availableProducts = products;
+        _isLoadingProducts = false;
+      });
+    } catch (e) {
+      setState(() => _isLoadingProducts = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cargar productos: $e')),
+        );
+      }
+    }
   }
 
   @override
@@ -52,7 +77,7 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
     }
   }
 
-  void _registrarVenta() {
+  Future<void> _registrarVenta() async {
     bool hasProduct = _currentSaleItems.any((item) => item.product != null);
     if (!hasProduct) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -61,28 +86,44 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
       return;
     }
 
-    final now = DateTime.now();
-    final newRecord = SaleRecord(
-      date: now,
-      total: _totalSale,
-      items: _currentSaleItems
-          .where((i) => i.product != null)
-          .map((i) => SaleRecordItem(name: i.product!.nombre, quantity: i.quantity, price: i.product!.valor.toDouble()))
-          .toList(),
-    );
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C))),
+      );
 
-    setState(() {
-      _salesHistory.insert(0, newRecord);
-      _currentSaleItems.clear();
-      _currentSaleItems.add(SaleItem());
-    });
+      final now = DateTime.now();
+      
+      // We process each item as a separate record in the database for simplicity of the schema shared
+      for (var item in _currentSaleItems.where((i) => i.product != null)) {
+        final record = SaleRecordModel(
+          productoId: item.product!.id!,
+          cantidadVendida: item.quantity,
+          totalVenta: (item.product!.valor * item.quantity).toInt(),
+          createdAt: now,
+        );
+        await _salesService.registerSale(record);
+      }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Venta registrada con éxito'),
-        backgroundColor: Colors.green,
-      ),
-    );
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        setState(() {
+          _currentSaleItems.clear();
+          _currentSaleItems.add(SaleItem());
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Venta registrada y stock actualizado'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al registrar venta: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Future<void> _selectDateRange() async {
@@ -114,6 +155,10 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoadingProducts) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C)));
+    }
+
     return Column(
       children: [
         Padding(
@@ -150,7 +195,7 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
         ),
         Expanded(
           child: TabBarView(
-            physics: const NeverScrollableScrollPhysics(), // Disable swipe to force button use
+            physics: const NeverScrollableScrollPhysics(),
             controller: _tabController,
             children: [
               _buildRegistroTab(),
@@ -159,33 +204,6 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildModeButton({required String label, required bool isActive, required VoidCallback onTap}) {
-    return InkWell(
-      onTap: isActive ? null : onTap, // Inactive if already active
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isActive ? const Color(0xFF8B5E3C) : Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: const Color(0xFF8B5E3C)),
-          boxShadow: isActive
-              ? [BoxShadow(color: const Color(0xFF8B5E3C).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))]
-              : null,
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              color: isActive ? Colors.white : const Color(0xFF8B5E3C),
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -198,15 +216,9 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Nueva Venta',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
+                Text('Nueva Venta', style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 8),
-                Text(
-                  'Ingresa los productos vendidos',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 14),
-                ),
+                Text('Ingresa los productos vendidos', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
               ],
             ),
           ),
@@ -249,82 +261,95 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
   }
 
   Widget _buildHistorialTab() {
-    final filteredSales = _selectedDateRange == null
-        ? _salesHistory
-        : _salesHistory.where((s) => s.date.isAfter(_selectedDateRange!.start) && s.date.isBefore(_selectedDateRange!.end.add(const Duration(days: 1)))).toList();
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _salesService.getSalesHistory(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C)));
+        }
 
-    double historyTotal = filteredSales.fold(0, (sum, item) => sum + item.total);
+        final allSales = snapshot.data ?? [];
+        final filteredSales = _selectedDateRange == null
+            ? allSales
+            : allSales.where((s) {
+                final date = DateTime.parse(s['created_at']);
+                return date.isAfter(_selectedDateRange!.start) && date.isBefore(_selectedDateRange!.end.add(const Duration(days: 1)));
+              }).toList();
 
-    return CustomScrollView(
-      slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(24.0),
-          sliver: SliverToBoxAdapter(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        double historyTotal = filteredSales.fold(0, (sum, item) => sum + (item['total_venta'] ?? 0));
+
+        return CustomScrollView(
+          slivers: [
+            SliverPadding(
+              padding: const EdgeInsets.all(24.0),
+              sliver: SliverToBoxAdapter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Ventas Registradas', style: Theme.of(context).textTheme.titleLarge),
-                    IconButton(
-                      icon: const Icon(Icons.calendar_month, color: Color(0xFF8B5E3C)),
-                      onPressed: _selectDateRange,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Ventas Registradas', style: Theme.of(context).textTheme.titleLarge),
+                        IconButton(
+                          icon: const Icon(Icons.calendar_month, color: Color(0xFF8B5E3C)),
+                          onPressed: _selectDateRange,
+                        ),
+                      ],
                     ),
+                    if (_selectedDateRange != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Chip(
+                          label: Text(
+                            '${DateFormat('dd/MM').format(_selectedDateRange!.start)} - ${DateFormat('dd/MM').format(_selectedDateRange!.end)}',
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF8B5E3C)),
+                          ),
+                          onDeleted: () => setState(() => _selectedDateRange = null),
+                          deleteIcon: const Icon(Icons.close, size: 14, color: Color(0xFF8B5E3C)),
+                          backgroundColor: const Color(0xFFD2B48C).withOpacity(0.2),
+                        ),
+                      ),
+                    const SizedBox(height: 16),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF8B5E3C).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF8B5E3C).withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        children: [
+                          const Text('TOTAL EN PERIODO', style: TextStyle(fontSize: 12, color: Color(0xFF8B5E3C), fontWeight: FontWeight.bold)),
+                          Text('\$$historyTotal', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF4E342E))),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
                   ],
                 ),
-                if (_selectedDateRange != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0),
-                    child: Chip(
-                      label: Text(
-                        '${DateFormat('dd/MM').format(_selectedDateRange!.start)} - ${DateFormat('dd/MM').format(_selectedDateRange!.end)}',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF8B5E3C)),
-                      ),
-                      onDeleted: () => setState(() => _selectedDateRange = null),
-                      deleteIcon: const Icon(Icons.close, size: 14, color: Color(0xFF8B5E3C)),
-                      backgroundColor: const Color(0xFFD2B48C).withOpacity(0.2),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5E3C).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF8B5E3C).withOpacity(0.2)),
-                  ),
-                  child: Column(
-                    children: [
-                      const Text('TOTAL EN PERIODO', style: TextStyle(fontSize: 12, color: Color(0xFF8B5E3C), fontWeight: FontWeight.bold)),
-                      Text('\$$historyTotal', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF4E342E))),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-              ],
-            ),
-          ),
-        ),
-        if (filteredSales.isEmpty)
-          const SliverFillRemaining(
-            child: Center(
-              child: Text('No hay ventas en este periodo', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
-            ),
-          )
-        else
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4),
-                child: _buildHistoryExpandableCard(filteredSales[index]),
               ),
-              childCount: filteredSales.length,
             ),
-          ),
-        const SliverToBoxAdapter(child: SizedBox(height: 40)),
-      ],
+            if (filteredSales.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: Text('No hay ventas en este periodo', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+                ),
+              )
+            else
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4),
+                    child: _buildHistoryExpandableCard(filteredSales[index]),
+                  ),
+                  childCount: filteredSales.length,
+                ),
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: 40)),
+          ],
+        );
+      }
     );
   }
 
@@ -345,7 +370,7 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
                 child: DropdownButtonFormField<Product>(
                   decoration: const InputDecoration(hintText: 'Producto', border: InputBorder.none),
                   value: item.product,
-                  items: mockProducts.map((p) => DropdownMenuItem(value: p, child: Text(p.nombre, style: const TextStyle(fontSize: 14)))).toList(),
+                  items: _availableProducts.map((p) => DropdownMenuItem(value: p, child: Text(p.nombre, style: const TextStyle(fontSize: 14)))).toList(),
                   onChanged: (val) => setState(() => item.product = val),
                   isExpanded: true,
                 ),
@@ -395,60 +420,67 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildHistoryExpandableCard(SaleRecord record) {
+  Widget _buildHistoryExpandableCard(Map<String, dynamic> record) {
+    final date = DateTime.parse(record['created_at']);
+    final productName = record['productos_terminados']['nombre'];
     return Card(
       elevation: 0,
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: ExpansionTile(
-        shape: const Border(), // Remove default borders
+        shape: const Border(),
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(color: const Color(0xFF8B5E3C).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-          child: Text(DateFormat('HH:mm').format(record.date), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C))),
+          child: Text(DateFormat('HH:mm').format(date), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C))),
         ),
         title: Text(
-          DateFormat('dd MMM, yyyy').format(record.date),
+          DateFormat('dd MMM, yyyy').format(date),
           style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         trailing: Text(
-          '\$${record.total}',
+          '\$${record['total_venta']}',
           style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
         ),
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Column(
-              children: record.items.map((item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(item.name, style: const TextStyle(fontSize: 13)),
-                    Text('${item.quantity}x \$${item.price}', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-                  ],
-                ),
-              )).toList(),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(productName, style: const TextStyle(fontSize: 13)),
+                Text('${record['cantidad_vendida']} unidades', style: const TextStyle(fontSize: 13, color: Colors.grey)),
+              ],
             ),
           ),
         ],
       ),
     );
   }
-}
 
-class SaleRecord {
-  final DateTime date;
-  final double total;
-  final List<SaleRecordItem> items;
-  SaleRecord({required this.date, required this.total, required this.items});
-}
-
-class SaleRecordItem {
-  final String name;
-  final int quantity;
-  final double price;
-  SaleRecordItem({required this.name, required this.quantity, required this.price});
+  Widget _buildModeButton({required String label, required bool isActive, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: isActive ? null : onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF8B5E3C) : Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFF8B5E3C)),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : const Color(0xFF8B5E3C),
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class SaleItem {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'services/supabase_config.dart';
 import 'screens/home_screen.dart';
 import 'screens/ventas_screen.dart';
 import 'screens/inventario_productos_screen.dart';
@@ -7,7 +8,9 @@ import 'screens/recetario_screen.dart';
 import 'screens/catalogo_screen.dart';
 import 'widgets/custom_sidebar.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SupabaseConfig.initialize();
   runApp(const MyApp());
 }
 
