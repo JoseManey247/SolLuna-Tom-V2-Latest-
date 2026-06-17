@@ -1,47 +1,56 @@
 import 'package:flutter/material.dart';
+import '../widgets/filter_dialog.dart';
 
 class RecetarioScreen extends StatelessWidget {
   const RecetarioScreen({super.key});
 
+  void _showFilter(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => const FilterDialog(type: FilterType.recipe),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Recetario',
-            style: Theme.of(context).textTheme.displayLarge,
+            'Recetario Maestro',
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 32),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           _buildSearchBar(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 16),
           Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildLargeActionButton(Icons.delete_outline, 'Eliminar receta', Colors.red[900]!),
-              const SizedBox(width: 24),
-              _buildLargeActionButton(Icons.edit_outlined, 'Modificar receta', Colors.orange[800]!),
-              const SizedBox(width: 24),
-              _buildLargeActionButton(Icons.add_circle_outline, 'Nueva receta', Colors.green[800]!),
+              _buildSmallIconButton(context, Icons.filter_alt_outlined, _showFilter, "Filtrar", const Color(0xFFD2B48C)),
+              const Spacer(),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add_circle_outline, size: 18),
+                label: const Text('Nueva Receta'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[800],
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 24),
-          Align(
-            alignment: Alignment.centerRight,
-            child: _buildFilterButton(),
-          ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Expanded(
-            child: GridView.count(
-              crossAxisCount: 3,
-              childAspectRatio: 0.75, // Adjusted for responsiveness
-              mainAxisSpacing: 24,
-              crossAxisSpacing: 24,
+            child: ListView(
               children: [
-                _buildRecipeCard(context, 'Oleato de Rosas'),
-                _buildRecipeCard(context, 'Agua de Florida'),
-                _buildRecipeCard(context, 'Crema Urea para Pies'),
+                _buildRecipeItem('Oleato de Rosas', 'Base Aceite', '2.5% de activos'),
+                _buildRecipeItem('Agua de Florida', 'Alcoholes', 'Esencias varias'),
+                _buildRecipeItem('Crema Urea para Pies', 'Cremas', '20% Urea activa'),
+                _buildRecipeItem('Jabón de Carbón', 'Jabones', 'Limpieza profunda'),
               ],
             ),
           ),
@@ -52,17 +61,10 @@ class RecetarioScreen extends StatelessWidget {
 
   Widget _buildSearchBar() {
     return Container(
-      width: 550,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFFD2B48C).withOpacity(0.5)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: const Row(
@@ -74,122 +76,88 @@ class RecetarioScreen extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Buscar recetas...',
                 border: InputBorder.none,
+                hintStyle: TextStyle(fontSize: 14),
               ),
             ),
           ),
-          Icon(Icons.mic_none, color: Colors.grey),
         ],
       ),
     );
   }
 
-  Widget _buildLargeActionButton(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.3)),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color),
-          const SizedBox(width: 12),
-          Text(
-            label,
-            style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 15),
-          ),
-        ],
+  Widget _buildSmallIconButton(BuildContext context, IconData icon, Function(BuildContext) onTap, String label, Color color) {
+    return InkWell(
+      onTap: () => onTap(context),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.5)),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 18, color: const Color(0xFF8B5E3C)),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(color: Color(0xFF8B5E3C), fontWeight: FontWeight.bold, fontSize: 13)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFilterButton() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: const Color(0xFFD2B48C).withOpacity(0.3),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF8B5E3C).withOpacity(0.2)),
-      ),
-      child: const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.filter_alt_outlined, size: 18, color: Color(0xFF8B5E3C)),
-          SizedBox(width: 8),
-          Text('Filtrar por ...', style: TextStyle(color: Color(0xFF8B5E3C), fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecipeCard(BuildContext context, String title) {
-    return Column(
-      children: [
-        Expanded(
-          flex: 3,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white, width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF8B5E3C).withOpacity(0.15),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
+  Widget _buildRecipeItem(String title, String category, String subtitle) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      color: Colors.white.withOpacity(0.9),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey[200]!)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFF8B5E3C).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.menu_book_outlined, color: Color(0xFF8B5E3C), size: 30),
             ),
-            child: Stack(
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4E342E)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    category,
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(color: Colors.grey[500], fontSize: 11, fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
+            ),
+            Column(
               children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.asset(
-                    'assets/logo_solluna.png',
-                    width: double.infinity,
-                    height: double.infinity,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      color: const Color(0xFFF1E4D0),
-                      child: const Icon(Icons.menu_book, size: 50, color: Color(0xFF8B5E3C)),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 10,
-                  left: 10,
-                  child: Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.grey.withOpacity(0.3)),
-                    ),
-                    child: const Icon(Icons.check, size: 16, color: Colors.green),
-                  ),
-                ),
+                IconButton(onPressed: () {}, icon: const Icon(Icons.edit_outlined, color: Colors.orange, size: 20), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                const SizedBox(height: 12),
+                IconButton(onPressed: () {}, icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
               ],
             ),
-          ),
+          ],
         ),
-        const SizedBox(height: 16),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleLarge,
-          textAlign: TextAlign.center,
-        ),
-        const Icon(Icons.keyboard_arrow_down, color: Color(0xFF8B5E3C), size: 32),
-      ],
+      ),
     );
   }
 }

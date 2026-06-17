@@ -67,7 +67,7 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
       total: _totalSale,
       items: _currentSaleItems
           .where((i) => i.product != null)
-          .map((i) => SaleRecordItem(name: i.product!.nombre, quantity: i.quantity, price: i.product!.valor))
+          .map((i) => SaleRecordItem(name: i.product!.nombre, quantity: i.quantity, price: i.product!.valor.toDouble()))
           .toList(),
     );
 
@@ -126,33 +126,31 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
                 style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 32),
               ),
               const SizedBox(height: 16),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
-                  ],
-                ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    borderRadius: BorderRadius.circular(15),
-                    color: const Color(0xFF8B5E3C),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildModeButton(
+                      label: 'Registrar',
+                      isActive: _tabController.index == 0,
+                      onTap: () => setState(() => _tabController.animateTo(0)),
+                    ),
                   ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: const Color(0xFF8B5E3C),
-                  tabs: const [
-                    Tab(text: 'Registrar'),
-                    Tab(text: 'Historial'),
-                  ],
-                ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildModeButton(
+                      label: 'Historial',
+                      isActive: _tabController.index == 1,
+                      onTap: () => setState(() => _tabController.animateTo(1)),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
         Expanded(
           child: TabBarView(
+            physics: const NeverScrollableScrollPhysics(), // Disable swipe to force button use
             controller: _tabController,
             children: [
               _buildRegistroTab(),
@@ -161,6 +159,33 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildModeButton({required String label, required bool isActive, required VoidCallback onTap}) {
+    return InkWell(
+      onTap: isActive ? null : onTap, // Inactive if already active
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFF8B5E3C) : Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: const Color(0xFF8B5E3C)),
+          boxShadow: isActive
+              ? [BoxShadow(color: const Color(0xFF8B5E3C).withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))]
+              : null,
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: TextStyle(
+              color: isActive ? Colors.white : const Color(0xFF8B5E3C),
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ),
+      ),
     );
   }
 

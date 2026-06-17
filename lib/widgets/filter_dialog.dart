@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum FilterType { catalog, inventoryProducts, inventoryIngredients }
+enum FilterType { catalog, inventoryProducts, inventoryIngredients, recipe }
 
 class FilterDialog extends StatefulWidget {
   final FilterType type;
@@ -93,6 +93,8 @@ class _FilterDialogState extends State<FilterDialog> {
         return 'Inventario Productos';
       case FilterType.inventoryIngredients:
         return 'Inventario Ingredientes';
+      case FilterType.recipe:
+        return 'Recetas';
     }
   }
 }
