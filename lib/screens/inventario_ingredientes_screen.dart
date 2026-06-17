@@ -14,43 +14,43 @@ class InventarioIngredientesScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Inventario de Ingredientes',
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 40),
+            'Inventario Ingredientes',
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(fontSize: 32),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           _buildSearchBar(),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Row(
             children: [
-              _buildFilterButton(context),
+              _buildSmallIconButton(context, Icons.filter_alt_outlined, _showFilter, "Filtrar", const Color(0xFFD2B48C)),
               const Spacer(),
-              _buildActionButton('Eliminar', Colors.red[900]!, Icons.delete_sweep_outlined),
-              const SizedBox(width: 12),
-              _buildActionButton('Modificar', Colors.orange[800]!, Icons.mode_edit_outline_outlined),
-              const SizedBox(width: 12),
-              _buildActionButton('Agregar', Colors.green[800]!, Icons.add_to_photos_outlined),
+              ElevatedButton.icon(
+                onPressed: () {},
+                icon: const Icon(Icons.add_to_photos_outlined, size: 18),
+                label: const Text('Agregar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green[800],
+                  foregroundColor: Colors.white,
+                  elevation: 2,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              clipBehavior: Clip.antiAlias,
-              child: _buildInventoryTable(),
+            child: ListView(
+              children: [
+                _buildIngredientItem('1', 'Emulpharma', 'Emulsionante', '28 U', null),
+                _buildIngredientItem('2', 'Glicerina', 'Activos', '12 U', 'Por agotar'),
+                _buildIngredientItem('3', 'Plantas de orégano', 'Activos', '0 U', '¡Sin Stock!'),
+              ],
             ),
           ),
         ],
@@ -75,157 +75,96 @@ class InventarioIngredientesScreen extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: 'Buscar ingredientes...',
                 border: InputBorder.none,
+                hintStyle: TextStyle(fontSize: 14),
               ),
             ),
           ),
-          Icon(Icons.mic_none, color: Colors.grey),
         ],
       ),
     );
   }
 
-  Widget _buildFilterButton(BuildContext context) {
+  Widget _buildSmallIconButton(BuildContext context, IconData icon, Function(BuildContext) onTap, String label, Color color) {
     return InkWell(
-      onTap: () => _showFilter(context),
-      borderRadius: BorderRadius.circular(25),
+      onTap: () => onTap(context),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: const Color(0xFFD2B48C).withOpacity(0.3),
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: const Color(0xFF8B5E3C).withOpacity(0.2)),
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.5)),
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Row(
           children: [
-            Icon(Icons.filter_alt_outlined, size: 20, color: Color(0xFF8B5E3C)),
-            SizedBox(width: 8),
-            Text('Filtrar', style: TextStyle(color: Color(0xFF8B5E3C), fontWeight: FontWeight.bold)),
+            Icon(icon, size: 18, color: const Color(0xFF8B5E3C)),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(color: Color(0xFF8B5E3C), fontWeight: FontWeight.bold, fontSize: 13)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionButton(String label, Color color, IconData icon) {
-    return ElevatedButton.icon(
-      onPressed: () {},
-      icon: Icon(icon, size: 18),
-      label: Text(label),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: color,
-        foregroundColor: Colors.white,
-        elevation: 2,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
-  Widget _buildInventoryTable() {
-    return SingleChildScrollView(
-      child: Table(
-        columnWidths: const {
-          0: IntrinsicColumnWidth(),
-          1: FlexColumnWidth(1.2),
-          2: FlexColumnWidth(1),
-          3: IntrinsicColumnWidth(),
-          4: FlexColumnWidth(1.8),
-          5: FlexColumnWidth(1.2),
-        },
-        children: [
-          _buildTableHeader(),
-          _buildTableRow('1', 'Emulpharma', 'Emulsionante', '28 U', 'Emulsionador para cremas y más...', null, true),
-          _buildTableRow('2', 'Glicerina', 'Activos', '12 U', 'Usada para jabones y más...', 'Por agotar', false),
-          _buildTableRow('3', 'Plantas de orégano', 'Activos', '0 U', 'Usada para extraer desde aceites...', '¡Sin Stock!', true),
-          _buildTableRow('4', '-', '-', '-', '-', null, false),
-          _buildTableRow('5', '-', '-', '-', '-', null, true),
-        ],
-      ),
-    );
-  }
-
-  TableRow _buildTableHeader() {
-    return TableRow(
-      decoration: const BoxDecoration(color: Color(0xFF8B5E3C)),
-      children: [
-        _headerCell('ID'),
-        _headerCell('Nombre'),
-        _headerCell('Categoría'),
-        _headerCell('Stock'),
-        _headerCell('Descripción'),
-        _headerCell('Alertas'),
-      ],
-    );
-  }
-
-  Widget _headerCell(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      child: Text(
-        text,
-        style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-      ),
-    );
-  }
-
-  TableRow _buildTableRow(String id, String name, String cat, String stock, String desc, String? alert, bool isEven) {
-    return TableRow(
-      decoration: BoxDecoration(
-        color: isEven ? Colors.transparent : const Color(0xFFF1E4D0).withOpacity(0.3),
-      ),
-      children: [
-        _dataCell(id),
-        _dataCell(name, isItalic: true),
-        _dataCell(cat),
-        _dataCell(stock),
-        _dataCell(desc, isItalic: true),
-        Padding(
-          padding: const EdgeInsets.all(12),
-          child: alert == null
-              ? const SizedBox()
-              : Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: alert.contains('Sin') ? Colors.red[50] : Colors.orange[50],
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: alert.contains('Sin') ? Colors.red[200]! : Colors.orange[200]!),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        alert.contains('Sin') ? Icons.error_outline : Icons.warning_amber_rounded,
-                        color: alert.contains('Sin') ? Colors.red[900] : Colors.orange[900],
-                        size: 14,
-                      ),
-                      const SizedBox(width: 4),
-                      Flexible(
-                        child: Text(
-                          alert,
-                          style: TextStyle(
-                            color: alert.contains('Sin') ? Colors.red[900] : Colors.orange[900],
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+  Widget _buildIngredientItem(String id, String name, String category, String stock, String? alert) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      color: Colors.white.withOpacity(0.9),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey[200]!)),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: const Color(0xFF8B5E3C).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  child: Text('ID: $id', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C), fontSize: 12)),
                 ),
-        ),
-      ],
-    );
-  }
-
-  Widget _dataCell(String text, {bool isItalic = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      child: Text(
-        text,
-        style: TextStyle(
-          fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
-          color: const Color(0xFF5D4037),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4E342E)), maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+                IconButton(onPressed: () {}, icon: const Icon(Icons.mode_edit_outline_outlined, color: Colors.orange, size: 20)),
+                IconButton(onPressed: () {}, icon: const Icon(Icons.delete_sweep_outlined, color: Colors.red, size: 20)),
+              ],
+            ),
+            const Divider(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Categoría', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                    Text(category, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Stock Restante', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                    Text(stock, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF8B5E3C))),
+                  ],
+                ),
+                if (alert != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: alert.contains('Sin') ? Colors.red[50] : Colors.orange[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: alert.contains('Sin') ? Colors.red[200]! : Colors.orange[200]!),
+                    ),
+                    child: Text(
+                      alert,
+                      style: TextStyle(color: alert.contains('Sin') ? Colors.red[900] : Colors.orange[900], fontSize: 10, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ),
       ),
     );
