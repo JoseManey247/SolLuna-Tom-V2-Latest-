@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFFDF5E6),
         useMaterial3: true,
         // Using serif for a more natural, herbalist feel
-        fontFamily: 'Georgia',
+        //fontFamily: 'Georgia',
         textTheme: const TextTheme(
           displayLarge: TextStyle(fontSize: 48, fontWeight: FontWeight.w300, color: Color(0xFF5D4037), letterSpacing: -0.5),
           displayMedium: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF5D4037)),
@@ -112,25 +112,7 @@ class _MainScaffoldState extends State<MainScaffold> {
         selectedIndex: _selectedIndex,
         onItemTapped: _onItemTapped,
       ),
-      body: Stack(
-        children: [
-          // Subtle paper texture effect
-          Positioned.fill(
-            child: Container(
-              color: const Color(0xFFFDF5E6),
-              child: Opacity(
-                opacity: 0.03,
-                child: Image.asset(
-                  'assets/logo_solluna.png', // Reusing logo as a subtle watermark/pattern if needed
-                  repeat: ImageRepeat.repeat,
-                  scale: 10,
-                ),
-              ),
-            ),
-          ),
-          _screens[_selectedIndex],
-        ],
-      ),
+      body: _screens[_selectedIndex],
     );
   }
 }

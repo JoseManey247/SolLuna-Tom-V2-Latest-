@@ -87,26 +87,18 @@ class HomeScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatusMiniCard(
-                  'Productos con bajo stock',
-                  '5',
-                  Icons.warning_amber_rounded,
-                  Colors.orange[800]!,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildStatusMiniCard(
-                  'Ventas de hoy',
-                  '\$42.500',
-                  Icons.trending_up_rounded,
-                  Colors.green[800]!,
-                ),
-              ),
-            ],
+          _buildStatusMiniCard(
+            'Productos con bajo stock',
+            '5',
+            Icons.warning_amber_rounded,
+            Colors.orange[800]!,
+          ),
+          const SizedBox(height: 12),
+          _buildStatusMiniCard(
+            'Ventas de hoy',
+            '\$42.500',
+            Icons.trending_up_rounded,
+            Colors.green[800]!,
           ),
         ],
       ),
