@@ -40,23 +40,30 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildSearchBar(),
-              const SizedBox(width: 24),
+              Expanded(child: _buildSearchBar()),
+              const SizedBox(width: 12),
               _buildFilterButton(context),
             ],
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 32),
           Expanded(
-            child: GridView.builder(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                childAspectRatio: 0.75,
-                mainAxisSpacing: 24,
-                crossAxisSpacing: 24,
-              ),
-              itemCount: mockProducts.length,
-              itemBuilder: (context, index) {
-                return _buildProductCard(context, mockProducts[index]);
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                int crossAxisCount = constraints.maxWidth > 700 ? 2 : 1;
+                double aspectRatio = constraints.maxWidth > 700 ? 1.5 : 3.2;
+                
+                return GridView.builder(
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: aspectRatio,
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                  ),
+                  itemCount: mockProducts.length,
+                  itemBuilder: (context, index) {
+                    return _buildProductCard(context, mockProducts[index]);
+                  },
+                );
               },
             ),
           ),
@@ -67,7 +74,6 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
 
   Widget _buildSearchBar() {
     return Container(
-      width: 450,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
@@ -103,7 +109,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
       onTap: () => _showFilter(context),
       borderRadius: BorderRadius.circular(15),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: const Color(0xFF8B5E3C),
           borderRadius: BorderRadius.circular(15),
@@ -115,72 +121,84 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
             ),
           ],
         ),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.filter_alt_outlined, size: 20, color: Colors.white),
-            SizedBox(width: 10),
-            Text(
-              'Filtrar',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-          ],
-        ),
+        child: const Icon(Icons.filter_alt_outlined, size: 24, color: Colors.white),
       ),
     );
   }
 
   Widget _buildProductCard(BuildContext context, Product product) {
-    return Column(
-      children: [
-        Expanded(
-          flex: 3,
-          child: InkWell(
-            onTap: () => _showProductDetail(context, product),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white, width: 4),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF8B5E3C).withOpacity(0.15),
-                    blurRadius: 15,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Image.asset(
-                  product.imagePath,
-                  width: double.infinity,
-                  height: double.infinity,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: const Color(0xFFF1E4D0),
-                    child: const Icon(Icons.spa, size: 60, color: Color(0xFF8B5E3C)),
+    return Card(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: InkWell(
+        onTap: () => _showProductDetail(context, product),
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Row(
+            children: [
+              // Product Image
+              Container(
+                width: 100,
+                height: 100,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1E4D0).withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(15),
+                  child: Image.asset(
+                    product.imagePath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.spa,
+                      size: 40,
+                      color: Color(0xFF8B5E3C),
+                    ),
                   ),
                 ),
               ),
-            ),
+              const SizedBox(width: 16),
+              // Product Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      product.nombre,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF4E342E),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.inventory_2_outlined, size: 16, color: Color(0xFF8B5E3C)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Stock: ${product.stock}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF8B5E3C),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFFD2B48C)),
+            ],
           ),
         ),
-        const SizedBox(height: 12),
-        Text(
-          product.nombre,
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontSize: 16),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '\$${product.valor}',
-          style: const TextStyle(color: Color(0xFF8B5E3C), fontWeight: FontWeight.bold),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -275,12 +293,12 @@ class ProductDetailView extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 16),
-                          Row(
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
                             children: [
                               _buildBadge(product.categoria, Icons.category_outlined),
-                              const SizedBox(width: 12),
                               _buildBadge(product.peso, Icons.scale_outlined),
-                              const SizedBox(width: 12),
                               _buildBadge('Stock: ${product.stock}', Icons.inventory_2_outlined),
                             ],
                           ),
