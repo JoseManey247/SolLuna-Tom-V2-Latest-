@@ -53,8 +53,8 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  double get _totalSale {
-    double total = 0;
+  int get _totalSale {
+    int total = 0;
     for (var item in _currentSaleItems) {
       if (item.product != null) {
         total += item.product!.valor * item.quantity;
@@ -276,7 +276,7 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
                 return date.isAfter(_selectedDateRange!.start) && date.isBefore(_selectedDateRange!.end.add(const Duration(days: 1)));
               }).toList();
 
-        double historyTotal = filteredSales.fold(0, (sum, item) => sum + (item['total_venta'] ?? 0));
+        int historyTotal = filteredSales.fold(0, (sum, item) => sum + ((item['total_venta'] as num?)?.toInt() ?? 0));
 
         return CustomScrollView(
           slivers: [
@@ -369,7 +369,7 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
               child: DropdownButtonHideUnderline(
                 child: DropdownButtonFormField<Product>(
                   decoration: const InputDecoration(hintText: 'Producto', border: InputBorder.none),
-                  value: item.product,
+                  initialValue: item.product,
                   items: _availableProducts.map((p) => DropdownMenuItem(value: p, child: Text(p.nombre, style: const TextStyle(fontSize: 14)))).toList(),
                   onChanged: (val) => setState(() => item.product = val),
                   isExpanded: true,

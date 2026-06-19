@@ -37,6 +37,7 @@ class MyApp extends StatelessWidget {
           displayLarge: TextStyle(fontSize: 48, fontWeight: FontWeight.w300, color: Color(0xFF5D4037), letterSpacing: -0.5),
           displayMedium: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF5D4037)),
           titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF4E342E)),
+          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF4E342E)),
           bodyLarge: TextStyle(fontSize: 16, color: Color(0xFF5D4037)),
           bodyMedium: TextStyle(fontSize: 14, color: Color(0xFF5D4037)),
         ),

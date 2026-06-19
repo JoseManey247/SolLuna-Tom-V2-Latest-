@@ -22,7 +22,6 @@ class HomeScreen extends StatelessWidget {
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontStyle: FontStyle.italic),
           ),
           const SizedBox(height: 40),
-          // Quick Access Grid
           LayoutBuilder(
             builder: (context, constraints) {
               int crossAxisCount = constraints.maxWidth > 900 ? 4 : (constraints.maxWidth > 600 ? 3 : 2);
@@ -81,24 +80,23 @@ class HomeScreen extends StatelessWidget {
             },
           ),
           const SizedBox(height: 40),
-          // Mini Dashboard / Status Section
           Text(
             'Estado Actual',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          _buildStatusMiniCard(
-            'Productos con bajo stock',
-            '5',
-            Icons.warning_amber_rounded,
-            Colors.orange[800]!,
+          const _StatusCard(
+            label: 'Productos con bajo stock',
+            value: '5',
+            icon: Icons.warning_amber_rounded,
+            color: Color(0xFFE65100),
           ),
           const SizedBox(height: 12),
-          _buildStatusMiniCard(
-            'Ventas de hoy',
-            '\$42.500',
-            Icons.trending_up_rounded,
-            Colors.green[800]!,
+          const _StatusCard(
+            label: 'Ventas de hoy',
+            value: '\$42.500',
+            icon: Icons.trending_up_rounded,
+            color: Color(0xFF2E7D32),
           ),
         ],
       ),
@@ -145,8 +143,23 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildStatusMiniCard(String label, String value, IconData icon, Color color) {
+class _StatusCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _StatusCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(

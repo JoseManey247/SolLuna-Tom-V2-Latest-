@@ -33,6 +33,6 @@ class SalesService {
         .select('*, productos_terminados(nombre)')
         .order('created_at', ascending: false);
     
-    return response as List<Map<String, dynamic>>;
+    return response;
   }
 }

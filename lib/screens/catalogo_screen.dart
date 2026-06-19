@@ -12,24 +12,33 @@ class CatalogoScreen extends StatefulWidget {
 
 class _CatalogoScreenState extends State<CatalogoScreen> {
   final ProductService _productService = ProductService();
-  late Future<List<Product>> _productsFuture;
+  FilterOptions? _currentFilters;
+  late Stream<List<Product>> _productsStream;
 
   @override
   void initState() {
     super.initState();
-    _refreshProducts();
+    _updateStream();
   }
 
-  void _refreshProducts() {
+  void _updateStream() {
     setState(() {
-      _productsFuture = _productService.getProducts();
+      _productsStream = _productService.getProductsStream(options: _currentFilters);
     });
   }
 
   void _showFilter(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => const FilterDialog(type: FilterType.catalog),
+      builder: (context) => FilterDialog(
+        type: FilterType.catalog,
+        onApply: (options) {
+          setState(() {
+            _currentFilters = options;
+            _updateStream();
+          });
+        },
+      ),
     );
   }
 
@@ -59,19 +68,27 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
               Expanded(child: _buildSearchBar()),
               const SizedBox(width: 12),
               _buildFilterButton(context),
+              if (_currentFilters != null)
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.red),
+                  onPressed: () => setState(() {
+                    _currentFilters = null;
+                    _updateStream();
+                  }),
+                ),
             ],
           ),
           const SizedBox(height: 32),
           Expanded(
-            child: FutureBuilder<List<Product>>(
-              future: _productsFuture,
+            child: StreamBuilder<List<Product>>(
+              stream: _productsStream,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C)));
                 } else if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('No hay productos disponibles.'));
+                  return const Center(child: Text('No hay productos que coincidan.'));
                 }
 
                 final products = snapshot.data!;
@@ -80,20 +97,17 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                     int crossAxisCount = constraints.maxWidth > 700 ? 2 : 1;
                     double aspectRatio = constraints.maxWidth > 700 ? 1.5 : 3.2;
                     
-                    return RefreshIndicator(
-                      onRefresh: () async => _refreshProducts(),
-                      child: GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: crossAxisCount,
-                          childAspectRatio: aspectRatio,
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                        ),
-                        itemCount: products.length,
-                        itemBuilder: (context, index) {
-                          return _buildProductCard(context, products[index]);
-                        },
+                    return GridView.builder(
+                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: crossAxisCount,
+                        childAspectRatio: aspectRatio,
+                        mainAxisSpacing: 12,
+                        crossAxisSpacing: 12,
                       ),
+                      itemCount: products.length,
+                      itemBuilder: (context, index) {
+                        return _buildProductCard(context, products[index]);
+                      },
                     );
                   },
                 );

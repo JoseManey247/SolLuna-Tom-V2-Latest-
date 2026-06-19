@@ -18,7 +18,7 @@ class SaleRecordModel {
       id: json['id'],
       productoId: json['producto_id'],
       cantidadVendida: json['cantidad_vendida'],
-      totalVenta: json['total_venta'],
+      totalVenta: (json['total_venta'] as num).toInt(),
       createdAt: DateTime.parse(json['created_at']),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/filter_dialog.dart';
+import '../widgets/add_product_dialog.dart';
 import '../services/product_service.dart';
 import '../models/product.dart';
 
@@ -12,18 +13,75 @@ class InventarioProductosScreen extends StatefulWidget {
 
 class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
   final ProductService _productService = ProductService();
+  FilterOptions? _currentFilters;
   late Stream<List<Product>> _productsStream;
+  List<Product> _lastProducts = [];
 
   @override
   void initState() {
     super.initState();
-    _productsStream = _productService.getProductsStream();
+    _updateStream();
+  }
+
+  void _updateStream() {
+    setState(() {
+      _productsStream = _productService.getProductsStream(options: _currentFilters);
+    });
   }
 
   void _showFilter(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => const FilterDialog(type: FilterType.inventoryProducts),
+      builder: (context) => FilterDialog(
+        type: FilterType.inventoryProducts,
+        onApply: (options) {
+          setState(() {
+            _currentFilters = options;
+            _updateStream();
+          });
+        },
+      ),
+    );
+  }
+
+  void _showAddDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AddProductDialog(
+        existingProducts: _lastProducts,
+        onUpdateStock: (product, quantity) async {
+          try {
+            await _productService.updateStock(product.id!, product.stock + quantity);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Stock actualizado con éxito'), backgroundColor: Colors.green),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error al actualizar stock: $e'), backgroundColor: Colors.red),
+              );
+            }
+          }
+        },
+        onAddNew: (newProduct) async {
+          try {
+            await _productService.addProduct(newProduct);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Nuevo producto agregado'), backgroundColor: Colors.green),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error al agregar producto: $e'), backgroundColor: Colors.red),
+              );
+            }
+          }
+        },
+      ),
     );
   }
 
@@ -147,10 +205,21 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _buildSmallIconButton(context, Icons.filter_alt_outlined, _showFilter, "Filtrar", const Color(0xFFD2B48C)),
+              _buildSmallIconButton(context, Icons.filter_alt_outlined, (_) => _showFilter(context), "Filtrar", const Color(0xFFD2B48C)),
+              if (_currentFilters != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8.0),
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.red, size: 20),
+                    onPressed: () => setState(() {
+                      _currentFilters = null;
+                      _updateStream();
+                    }),
+                  ),
+                ),
               const Spacer(),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: _showAddDialog,
                 icon: const Icon(Icons.add_circle_outline, size: 18),
                 label: const Text('Agregar'),
                 style: ElevatedButton.styleFrom(
@@ -168,7 +237,7 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
             child: StreamBuilder<List<Product>>(
               stream: _productsStream,
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
+                if (snapshot.connectionState == ConnectionState.waiting && _lastProducts.isEmpty) {
                   return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C)));
                 } else if (snapshot.hasError) {
                   return Center(
@@ -181,15 +250,20 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
                       ],
                     ),
                   );
-                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                } 
+
+                if (snapshot.hasData) {
+                  _lastProducts = snapshot.data!;
+                }
+
+                if (_lastProducts.isEmpty) {
                   return const Center(child: Text('No hay productos en el inventario.'));
                 }
 
-                final products = snapshot.data!;
                 return ListView.builder(
-                  itemCount: products.length,
+                  itemCount: _lastProducts.length,
                   itemBuilder: (context, index) {
-                    final product = products[index];
+                    final product = _lastProducts[index];
                     return _buildInventoryItem(product);
                   },
                 );
