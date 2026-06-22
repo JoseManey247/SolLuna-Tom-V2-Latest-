@@ -5,7 +5,7 @@ import 'supabase_config.dart';
 class IngredientService {
   static const String tableName = 'insumos';
 
-  Stream<List<Ingredient>> getIngredientsStream({FilterOptions? options}) {
+  Stream<List<Ingredient>> getIngredientsStream({FilterOptions? options, String? search}) {
     var query = SupabaseConfig.client.from(tableName).stream(primaryKey: ['id']);
 
     String col = 'nombre';
@@ -28,6 +28,15 @@ class IngredientService {
     return query.order(col, ascending: asc).map((maps) {
       var list = maps.map((json) => Ingredient.fromJson(json)).toList();
       
+      // Filter by search term
+      if (search != null && search.isNotEmpty) {
+        final query = search.toLowerCase();
+        list = list.where((i) => 
+          i.nombre.toLowerCase().contains(query) || 
+          i.categoria.toLowerCase().contains(query)
+        ).toList();
+      }
+
       // Date filtering if needed (stream side)
       if (options?.startDate != null) {
         // created_at filtering is usually better done on server, 

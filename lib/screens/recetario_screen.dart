@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/filter_dialog.dart';
+import '../widgets/add_recipe_dialog.dart';
 import '../services/recipe_service.dart';
 import '../models/recipe.dart';
 
@@ -12,6 +13,7 @@ class RecetarioScreen extends StatefulWidget {
 
 class _RecetarioScreenState extends State<RecetarioScreen> {
   final RecipeService _recipeService = RecipeService();
+  final TextEditingController _searchController = TextEditingController();
   late Future<List<Recipe>> _recipesFuture;
 
   @override
@@ -20,9 +22,15 @@ class _RecetarioScreenState extends State<RecetarioScreen> {
     _refreshRecipes();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _refreshRecipes() {
     setState(() {
-      _recipesFuture = _recipeService.getRecipes();
+      _recipesFuture = _recipeService.getRecipes(search: _searchController.text);
     });
   }
 
@@ -39,6 +47,31 @@ class _RecetarioScreenState extends State<RecetarioScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _RecipeDetailSheet(recipe: recipe),
+    );
+  }
+
+  void _showAddRecipeDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AddRecipeDialog(
+        onSave: (newRecipe) async {
+          try {
+            await _recipeService.addRecipe(newRecipe);
+            _refreshRecipes();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Receta guardada con éxito'), backgroundColor: Colors.green),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error al guardar receta: $e'), backgroundColor: Colors.red),
+              );
+            }
+          }
+        },
+      ),
     );
   }
 
@@ -61,7 +94,7 @@ class _RecetarioScreenState extends State<RecetarioScreen> {
               _buildSmallIconButton(context, Icons.filter_alt_outlined, (_) => _showFilter(context), "Filtrar", const Color(0xFFD2B48C)),
               const Spacer(),
               ElevatedButton.icon(
-                onPressed: () {},
+                onPressed: _showAddRecipeDialog,
                 icon: const Icon(Icons.add_circle_outline, size: 18),
                 label: const Text('Nueva Receta'),
                 style: ElevatedButton.styleFrom(
@@ -113,13 +146,15 @@ class _RecetarioScreenState extends State<RecetarioScreen> {
         border: Border.all(color: const Color(0xFFD2B48C).withOpacity(0.5)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.search, color: Color(0xFF8B5E3C)),
-          SizedBox(width: 12),
+          const Icon(Icons.search, color: Color(0xFF8B5E3C)),
+          const SizedBox(width: 12),
           Expanded(
             child: TextField(
-              decoration: InputDecoration(
+              controller: _searchController,
+              onChanged: (_) => _refreshRecipes(),
+              decoration: const InputDecoration(
                 hintText: 'Buscar recetas...',
                 border: InputBorder.none,
                 hintStyle: TextStyle(fontSize: 14),

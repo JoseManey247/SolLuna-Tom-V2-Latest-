@@ -1,12 +1,48 @@
 import 'package:flutter/material.dart';
 
-class HomeScreen extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import '../services/product_service.dart';
+import '../services/sales_service.dart';
+import '../models/product.dart';
+
+class HomeScreen extends StatefulWidget {
   final Function(int) onNavigate;
 
   const HomeScreen({super.key, required this.onNavigate});
 
   @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final ProductService _productService = ProductService();
+  final SalesService _salesService = SalesService();
+  
+  late Future<Map<String, dynamic>> _homeDataFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshData();
+  }
+
+  void _refreshData() {
+    setState(() {
+      _homeDataFuture = Future.wait([
+        _productService.getProducts(),
+        _salesService.getMonthlySalesTotal(),
+      ]).then((results) => {
+        'products': results[0] as List<Product>,
+        'monthlySales': results[1] as double,
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final currencyFormat = NumberFormat.currency(locale: 'es_CL', symbol: '\$', decimalDigits: 0);
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -80,23 +116,80 @@ class HomeScreen extends StatelessWidget {
             },
           ),
           const SizedBox(height: 40),
-          Text(
-            'Estado Actual',
-            style: Theme.of(context).textTheme.titleLarge,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Resumen del Mes',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Color(0xFF8B5E3C)),
+                onPressed: _refreshData,
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          const _StatusCard(
-            label: 'Productos con bajo stock',
-            value: '5',
-            icon: Icons.warning_amber_rounded,
-            color: Color(0xFFE65100),
-          ),
-          const SizedBox(height: 12),
-          const _StatusCard(
-            label: 'Ventas de hoy',
-            value: '\$42.500',
-            icon: Icons.trending_up_rounded,
-            color: Color(0xFF2E7D32),
+          FutureBuilder<Map<String, dynamic>>(
+            future: _homeDataFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator(color: Color(0xFF8B5E3C)));
+              }
+              
+              if (snapshot.hasError) {
+                return Center(child: Text('Error al cargar datos: ${snapshot.error}'));
+              }
+
+              final products = snapshot.data?['products'] as List<Product>? ?? [];
+              final monthlySales = snapshot.data?['monthlySales'] as double? ?? 0.0;
+              final monthName = DateFormat('MMMM', 'es_ES').format(DateTime.now());
+              final capitalizedMonth = monthName[0].toUpperCase() + monthName.substring(1);
+
+              final lowStock = products.where((p) => p.stock <= 5).length;
+              final midStock = products.where((p) => p.stock > 5 && p.stock <= 15).length;
+              final highStock = products.where((p) => p.stock >= 20).length;
+
+              return Column(
+                children: [
+                  _StatusCard(
+                    label: 'Ventas de $capitalizedMonth',
+                    value: currencyFormat.format(monthlySales),
+                    icon: Icons.trending_up_rounded,
+                    color: const Color(0xFF2E7D32),
+                  ),
+                  const SizedBox(height: 24),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Estado del Inventario',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _StatusCard(
+                    label: 'Bajo Stock (0 - 5 unidades)',
+                    value: '$lowStock',
+                    icon: Icons.warning_amber_rounded,
+                    color: const Color(0xFFD32F2F),
+                  ),
+                  const SizedBox(height: 12),
+                  _StatusCard(
+                    label: 'Stock Medio (5 - 15 unidades)',
+                    value: '$midStock',
+                    icon: Icons.inventory_2_outlined,
+                    color: const Color(0xFFFBC02D),
+                  ),
+                  const SizedBox(height: 12),
+                  _StatusCard(
+                    label: 'Stock Alto (20+ unidades)',
+                    value: '$highStock',
+                    icon: Icons.check_circle_outline_rounded,
+                    color: const Color(0xFF388E3C),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -109,7 +202,7 @@ class HomeScreen extends StatelessWidget {
       shadowColor: color.withOpacity(0.2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: InkWell(
-        onTap: () => onNavigate(index),
+        onTap: () => widget.onNavigate(index),
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(

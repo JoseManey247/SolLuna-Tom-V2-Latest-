@@ -5,6 +5,13 @@ import '../services/product_service.dart';
 import '../services/sales_service.dart';
 import 'package:intl/intl.dart';
 
+extension StringExtension on String {
+  String capitalize() {
+    if (isEmpty) return this;
+    return "${this[0].toUpperCase()}${substring(1)}";
+  }
+}
+
 class VentasScreen extends StatefulWidget {
   const VentasScreen({super.key});
 
@@ -126,32 +133,6 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
     }
   }
 
-  Future<void> _selectDateRange() async {
-    final DateTimeRange? picked = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(2023),
-      lastDate: DateTime.now(),
-      initialDateRange: _selectedDateRange,
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Color(0xFF8B5E3C),
-              onPrimary: Colors.white,
-              surface: Colors.white,
-              onSurface: Color(0xFF4E342E),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (picked != null) {
-      setState(() {
-        _selectedDateRange = picked;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -269,14 +250,19 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
         }
 
         final allSales = snapshot.data ?? [];
-        final filteredSales = _selectedDateRange == null
-            ? allSales
-            : allSales.where((s) {
-                final date = DateTime.parse(s['created_at']);
-                return date.isAfter(_selectedDateRange!.start) && date.isBefore(_selectedDateRange!.end.add(const Duration(days: 1)));
-              }).toList();
+        
+        // Group sales by date
+        final Map<String, List<Map<String, dynamic>>> groupedSales = {};
+        for (var sale in allSales) {
+          final date = DateTime.parse(sale['created_at']).toLocal();
+          final dateStr = DateFormat('yyyy-MM-dd').format(date);
+          if (!groupedSales.containsKey(dateStr)) {
+            groupedSales[dateStr] = [];
+          }
+          groupedSales[dateStr]!.add(sale);
+        }
 
-        int historyTotal = filteredSales.fold(0, (sum, item) => sum + ((item['total_venta'] as num?)?.toInt() ?? 0));
+        final sortedDates = groupedSales.keys.toList()..sort((a, b) => b.compareTo(a));
 
         return CustomScrollView(
           slivers: [
@@ -286,64 +272,94 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text('Ventas Registradas', style: Theme.of(context).textTheme.titleLarge),
-                        IconButton(
-                          icon: const Icon(Icons.calendar_month, color: Color(0xFF8B5E3C)),
-                          onPressed: _selectDateRange,
-                        ),
-                      ],
-                    ),
-                    if (_selectedDateRange != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8.0),
-                        child: Chip(
-                          label: Text(
-                            '${DateFormat('dd/MM').format(_selectedDateRange!.start)} - ${DateFormat('dd/MM').format(_selectedDateRange!.end)}',
-                            style: const TextStyle(fontSize: 12, color: Color(0xFF8B5E3C)),
-                          ),
-                          onDeleted: () => setState(() => _selectedDateRange = null),
-                          deleteIcon: const Icon(Icons.close, size: 14, color: Color(0xFF8B5E3C)),
-                          backgroundColor: const Color(0xFFD2B48C).withOpacity(0.2),
-                        ),
-                      ),
+                    Text('Registro de Ventas Diario', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    Text('Acumulado por fecha', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
                     const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF8B5E3C).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF8B5E3C).withOpacity(0.2)),
-                      ),
-                      child: Column(
-                        children: [
-                          const Text('TOTAL EN PERIODO', style: TextStyle(fontSize: 12, color: Color(0xFF8B5E3C), fontWeight: FontWeight.bold)),
-                          Text('\$$historyTotal', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF4E342E))),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
-            if (filteredSales.isEmpty)
+            if (sortedDates.isEmpty)
               const SliverFillRemaining(
                 child: Center(
-                  child: Text('No hay ventas en este periodo', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
+                  child: Text('No hay ventas registradas', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
                 ),
               )
             else
               SliverList(
                 delegate: SliverChildBuilderDelegate(
-                  (context, index) => Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4),
-                    child: _buildHistoryExpandableCard(filteredSales[index]),
-                  ),
-                  childCount: filteredSales.length,
+                  (context, index) {
+                    final dateStr = sortedDates[index];
+                    final daySales = groupedSales[dateStr]!;
+                    final totalDay = daySales.fold(0, (sum, item) => sum + ((item['total_venta'] as num?)?.toInt() ?? 0));
+                    final dateObj = DateTime.parse(dateStr);
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 6),
+                      child: Card(
+                        elevation: 0,
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15), 
+                          side: BorderSide(color: Colors.grey[200]!),
+                        ),
+                        child: ExpansionTile(
+                          shape: const Border(),
+                          leading: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5E3C).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.calendar_today, color: Color(0xFF8B5E3C), size: 20),
+                          ),
+                          title: Text(
+                            DateFormat('EEEE dd/MM/yyyy', 'es_ES').format(dateObj).capitalize(),
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                          ),
+                          subtitle: Text('${daySales.length} ventas realizadas'),
+                          trailing: Text(
+                            '\$${NumberFormat('#,###', 'es_CL').format(totalDay)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 18),
+                          ),
+                          children: daySales.map((sale) {
+                            final saleTime = DateTime.parse(sale['created_at']).toLocal();
+                            final prodName = sale['productos_terminados']['nombre'];
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              decoration: BoxDecoration(
+                                border: Border(top: BorderSide(color: Colors.grey[100]!)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    DateFormat('HH:mm').format(saleTime),
+                                    style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold, fontSize: 12),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(prodName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                                        Text('${sale['cantidad_vendida']} unidades', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                                      ],
+                                    ),
+                                  ),
+                                  Text(
+                                    '\$${NumberFormat('#,###', 'es_CL').format(sale['total_venta'])}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    );
+                  },
+                  childCount: sortedDates.length,
                 ),
               ),
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
@@ -420,43 +436,6 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildHistoryExpandableCard(Map<String, dynamic> record) {
-    final date = DateTime.parse(record['created_at']);
-    final productName = record['productos_terminados']['nombre'];
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: ExpansionTile(
-        shape: const Border(),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(color: const Color(0xFF8B5E3C).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-          child: Text(DateFormat('HH:mm').format(date), style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C))),
-        ),
-        title: Text(
-          DateFormat('dd MMM, yyyy').format(date),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-        trailing: Text(
-          '\$${record['total_venta']}',
-          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16),
-        ),
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(productName, style: const TextStyle(fontSize: 13)),
-                Text('${record['cantidad_vendida']} unidades', style: const TextStyle(fontSize: 13, color: Colors.grey)),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildModeButton({required String label, required bool isActive, required VoidCallback onTap}) {
     return InkWell(

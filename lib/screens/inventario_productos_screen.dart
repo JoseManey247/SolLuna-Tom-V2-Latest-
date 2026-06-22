@@ -13,6 +13,7 @@ class InventarioProductosScreen extends StatefulWidget {
 
 class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
   final ProductService _productService = ProductService();
+  final TextEditingController _searchController = TextEditingController();
   FilterOptions? _currentFilters;
   late Stream<List<Product>> _productsStream;
   List<Product> _lastProducts = [];
@@ -23,9 +24,18 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
     _updateStream();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _updateStream() {
     setState(() {
-      _productsStream = _productService.getProductsStream(options: _currentFilters);
+      _productsStream = _productService.getProductsStream(
+        options: _currentFilters,
+        search: _searchController.text,
+      );
     });
   }
 
@@ -129,6 +139,7 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
     final stockController = TextEditingController(text: product.stock.toString());
     final precioController = TextEditingController(text: product.valor.toString());
     final descripcionController = TextEditingController(text: product.descripcion);
+    final imagenController = TextEditingController(text: product.imagePath);
 
     await showDialog(
       context: context,
@@ -142,6 +153,7 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
               TextField(controller: categoriaController, decoration: const InputDecoration(labelText: 'Categoría')),
               TextField(controller: stockController, decoration: const InputDecoration(labelText: 'Stock'), keyboardType: TextInputType.number),
               TextField(controller: precioController, decoration: const InputDecoration(labelText: 'Precio de Venta'), keyboardType: TextInputType.number),
+              TextField(controller: imagenController, decoration: const InputDecoration(labelText: 'Nombre del archivo de imagen (ej: aceite.png)')),
               TextField(
                 controller: descripcionController,
                 decoration: const InputDecoration(labelText: 'Descripción'),
@@ -161,7 +173,7 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
                 stock: int.tryParse(stockController.text) ?? product.stock,
                 valor: int.tryParse(precioController.text) ?? product.valor,
                 descripcion: descripcionController.text,
-                imagePath: product.imagePath,
+                imagePath: imagenController.text,
                 peso: product.peso,
               );
               
@@ -260,12 +272,31 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
                   return const Center(child: Text('No hay productos en el inventario.'));
                 }
 
-                return ListView.builder(
-                  itemCount: _lastProducts.length,
-                  itemBuilder: (context, index) {
-                    final product = _lastProducts[index];
-                    return _buildInventoryItem(product);
-                  },
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 16, color: Color(0xFF8B5E3C)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Total de productos registrados: ${_lastProducts.length}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _lastProducts.length,
+                        itemBuilder: (context, index) {
+                          final product = _lastProducts[index];
+                          return _buildInventoryItem(product);
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -283,13 +314,15 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
         border: Border.all(color: const Color(0xFFD2B48C).withOpacity(0.5)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.search, color: Color(0xFF8B5E3C)),
-          SizedBox(width: 12),
+          const Icon(Icons.search, color: Color(0xFF8B5E3C)),
+          const SizedBox(width: 12),
           Expanded(
             child: TextField(
-              decoration: InputDecoration(
+              controller: _searchController,
+              onChanged: (_) => _updateStream(),
+              decoration: const InputDecoration(
                 hintText: 'Buscar en el inventario...',
                 border: InputBorder.none,
                 hintStyle: TextStyle(fontSize: 14),
@@ -337,11 +370,7 @@ class _InventarioProductosScreenState extends State<InventarioProductosScreen> {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: const Color(0xFF8B5E3C).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Text('ID: ${product.id}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C), fontSize: 12)),
-                ),
+                const Icon(Icons.inventory_2_outlined, color: Color(0xFF8B5E3C), size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(product.nombre, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4E342E)), maxLines: 1, overflow: TextOverflow.ellipsis),

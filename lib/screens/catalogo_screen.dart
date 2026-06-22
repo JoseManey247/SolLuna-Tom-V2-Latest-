@@ -12,6 +12,7 @@ class CatalogoScreen extends StatefulWidget {
 
 class _CatalogoScreenState extends State<CatalogoScreen> {
   final ProductService _productService = ProductService();
+  final TextEditingController _searchController = TextEditingController();
   FilterOptions? _currentFilters;
   late Stream<List<Product>> _productsStream;
 
@@ -21,9 +22,18 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
     _updateStream();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _updateStream() {
     setState(() {
-      _productsStream = _productService.getProductsStream(options: _currentFilters);
+      _productsStream = _productService.getProductsStream(
+        options: _currentFilters,
+        search: _searchController.text,
+      );
     });
   }
 
@@ -133,13 +143,15 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
         ],
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.search, color: Color(0xFF8B5E3C)),
-          SizedBox(width: 12),
+          const Icon(Icons.search, color: Color(0xFF8B5E3C)),
+          const SizedBox(width: 12),
           Expanded(
             child: TextField(
-              decoration: InputDecoration(
+              controller: _searchController,
+              onChanged: (_) => _updateStream(),
+              decoration: const InputDecoration(
                 hintText: 'Buscar productos naturales...',
                 border: InputBorder.none,
                 hintStyle: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
@@ -194,15 +206,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(15),
-                  child: Image.network(
-                    product.imagePath,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => const Icon(
-                      Icons.spa,
-                      size: 40,
-                      color: Color(0xFF8B5E3C),
-                    ),
-                  ),
+                  child: product.buildImage(fit: BoxFit.contain),
                 ),
               ),
               const SizedBox(width: 16),
@@ -309,11 +313,7 @@ class ProductDetailView extends StatelessWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(20),
-                          child: Image.network(
-                            product.imagePath,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) => const Icon(Icons.spa, size: 100, color: Color(0xFF8B5E3C)),
-                          ),
+                          child: product.buildImage(fit: BoxFit.contain),
                         ),
                       ),
                       const SizedBox(height: 32),

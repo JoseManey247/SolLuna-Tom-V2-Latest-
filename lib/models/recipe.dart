@@ -45,6 +45,7 @@ class RecipeIngredient {
   final int insumoId;
   final String? nombreInsumo;
   final String fase;
+  final String funcion; // Nuevo campo
   final double porcentaje;
   final double gramos;
 
@@ -53,6 +54,7 @@ class RecipeIngredient {
     required this.insumoId,
     this.nombreInsumo,
     required this.fase,
+    this.funcion = '', // Valor por defecto
     required this.porcentaje,
     required this.gramos,
   });
@@ -63,6 +65,7 @@ class RecipeIngredient {
       insumoId: json['insumo_id'],
       nombreInsumo: json['insumos']?['nombre'],
       fase: json['fase'] ?? '',
+      funcion: json['funcion'] ?? '', // Lee de la base de datos
       porcentaje: (json['porcentaje'] ?? 0.0).toDouble(),
       gramos: (json['gramos_base'] ?? 0.0).toDouble(),
     );

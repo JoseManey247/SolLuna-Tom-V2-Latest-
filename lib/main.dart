@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'services/supabase_config.dart';
 import 'screens/home_screen.dart';
 import 'screens/ventas_screen.dart';
@@ -10,6 +11,7 @@ import 'widgets/custom_sidebar.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('es_ES', null);
   await SupabaseConfig.initialize();
   runApp(const MyApp());
 }
@@ -31,8 +33,6 @@ class MyApp extends StatelessWidget {
         ),
         scaffoldBackgroundColor: const Color(0xFFFDF5E6),
         useMaterial3: true,
-        // Using serif for a more natural, herbalist feel
-        //fontFamily: 'Georgia',
         textTheme: const TextTheme(
           displayLarge: TextStyle(fontSize: 48, fontWeight: FontWeight.w300, color: Color(0xFF5D4037), letterSpacing: -0.5),
           displayMedium: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF5D4037)),
@@ -56,7 +56,6 @@ class MainScaffold extends StatefulWidget {
 
 class _MainScaffoldState extends State<MainScaffold> {
   int _selectedIndex = 0;
-
   late final List<Widget> _screens;
 
   @override
@@ -73,7 +72,7 @@ class _MainScaffoldState extends State<MainScaffold> {
       const VentasScreen(),
       const InventarioProductosScreen(),
       const InventarioIngredientesScreen(),
-      const Center(child: Text('Configuración Placeholder')), // Configuración
+      const Center(child: Text('Configuración Placeholder')),
     ];
   }
 
@@ -81,42 +80,53 @@ class _MainScaffoldState extends State<MainScaffold> {
     setState(() {
       _selectedIndex = index;
     });
-    Navigator.pop(context); // Close drawer
+    Navigator.pop(context); // Cerrar drawer
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Color(0xFF8B5E3C), size: 32),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: Color(0xFF8B5E3C), size: 32),
-            onPressed: () {},
-          ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: Image.asset(
-              'assets/logo_solluna.png',
-              width: 50,
-              height: 50,
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.spa, color: Color(0xFF8B5E3C), size: 40),
+    return PopScope(
+      canPop: _selectedIndex == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_selectedIndex != 0) {
+          setState(() {
+            _selectedIndex = 0;
+          });
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu, color: Color(0xFF8B5E3C), size: 32),
+              onPressed: () => Scaffold.of(context).openDrawer(),
             ),
           ),
-        ],
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.account_circle_outlined, color: Color(0xFF8B5E3C), size: 32),
+              onPressed: () {},
+            ),
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Image.asset(
+                'assets/logo_solluna.png',
+                width: 50,
+                height: 50,
+                errorBuilder: (context, error, stackTrace) => const Icon(Icons.spa, color: Color(0xFF8B5E3C), size: 40),
+              ),
+            ),
+          ],
+        ),
+        drawer: CustomSidebar(
+          selectedIndex: _selectedIndex,
+          onItemTapped: _onItemTapped,
+        ),
+        body: _screens[_selectedIndex],
       ),
-      drawer: CustomSidebar(
-        selectedIndex: _selectedIndex,
-        onItemTapped: _onItemTapped,
-      ),
-      body: _screens[_selectedIndex],
     );
   }
 }

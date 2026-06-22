@@ -5,10 +5,10 @@ import 'supabase_config.dart';
 class ProductService {
   static const String tableName = 'productos_terminados';
 
-  Stream<List<Product>> getProductsStream({FilterOptions? options}) {
+  Stream<List<Product>> getProductsStream({FilterOptions? options, String? search}) {
     var query = SupabaseConfig.client.from(tableName).stream(primaryKey: ['id']);
 
-    // Map high-level orderType to DB columns
+    // Usando 'nombre' en minúscula (Supabase es sensible a mayúsculas)
     String col = 'nombre';
     bool asc = true;
 
@@ -17,7 +17,6 @@ class ProductService {
         col = 'id';
         asc = false;
       } else {
-        // Logic for single selection
         if (options.selectedFields.isNotEmpty) {
           String first = options.selectedFields.first;
           if (first.contains('Precio')) col = 'precio_venta';
@@ -31,7 +30,16 @@ class ProductService {
     return query.order(col, ascending: asc).map((maps) {
       var list = maps.map((json) => Product.fromJson(json)).toList();
       
-      // Price Range filter (client side for streams usually easier or use RPC/Rest for complex server filtering)
+      // Filter by search term
+      if (search != null && search.isNotEmpty) {
+        final query = search.toLowerCase();
+        list = list.where((p) => 
+          p.nombre.toLowerCase().contains(query) || 
+          p.descripcion.toLowerCase().contains(query)
+        ).toList();
+      }
+
+      // Price Range filter
       if (options?.priceRange != null) {
         list = list.where((p) => p.valor >= options!.priceRange!.start && p.valor <= options.priceRange!.end).toList();
       }

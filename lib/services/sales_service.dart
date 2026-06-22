@@ -35,4 +35,20 @@ class SalesService {
     
     return response;
   }
+
+  Future<double> getMonthlySalesTotal() async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1).toIso8601String();
+    
+    final response = await SupabaseConfig.client
+        .from(tableName)
+        .select('total_venta')
+        .gte('created_at', startOfMonth);
+    
+    double total = 0;
+    for (var item in response) {
+      total += (item['total_venta'] as num).toDouble();
+    }
+    return total;
+  }
 }

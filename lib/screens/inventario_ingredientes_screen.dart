@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../widgets/filter_dialog.dart';
+import '../widgets/add_ingredient_dialog.dart';
 import '../services/ingredient_service.dart';
 import '../models/ingredient.dart';
 
@@ -12,6 +13,7 @@ class InventarioIngredientesScreen extends StatefulWidget {
 
 class _InventarioIngredientesScreenState extends State<InventarioIngredientesScreen> {
   final IngredientService _ingredientService = IngredientService();
+  final TextEditingController _searchController = TextEditingController();
   FilterOptions? _currentFilters;
   late Stream<List<Ingredient>> _ingredientsStream;
 
@@ -21,9 +23,18 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
     _updateStream();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   void _updateStream() {
     setState(() {
-      _ingredientsStream = _ingredientService.getIngredientsStream(options: _currentFilters);
+      _ingredientsStream = _ingredientService.getIngredientsStream(
+        options: _currentFilters,
+        search: _searchController.text,
+      );
     });
   }
 
@@ -138,6 +149,31 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
     );
   }
 
+  void _showAddDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AddIngredientDialog(
+        onSave: (newIng) async {
+          try {
+            await _ingredientService.addIngredient(newIng);
+            _updateStream();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Ingrediente agregado con éxito'), backgroundColor: Colors.green),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error al agregar: $e'), backgroundColor: Colors.red),
+              );
+            }
+          }
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -168,7 +204,7 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
                 ),
               const Spacer(),
               ElevatedButton.icon(
-                onPressed: () {}, 
+                onPressed: _showAddDialog,
                 icon: const Icon(Icons.add_to_photos_outlined, size: 18),
                 label: const Text('Agregar'),
                 style: ElevatedButton.styleFrom(
@@ -204,12 +240,31 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
                 }
 
                 final ingredients = snapshot.data!;
-                return ListView.builder(
-                  itemCount: ingredients.length,
-                  itemBuilder: (context, index) {
-                    final ingredient = ingredients[index];
-                    return _buildIngredientItem(ingredient);
-                  },
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.info_outline, size: 16, color: Color(0xFF8B5E3C)),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Total de insumos registrados: ${ingredients.length}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: ingredients.length,
+                        itemBuilder: (context, index) {
+                          final ingredient = ingredients[index];
+                          return _buildIngredientItem(ingredient);
+                        },
+                      ),
+                    ),
+                  ],
                 );
               },
             ),
@@ -227,13 +282,15 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
         border: Border.all(color: const Color(0xFFD2B48C).withOpacity(0.5)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: const Row(
+      child: Row(
         children: [
-          Icon(Icons.search, color: Color(0xFF8B5E3C)),
-          SizedBox(width: 12),
+          const Icon(Icons.search, color: Color(0xFF8B5E3C)),
+          const SizedBox(width: 12),
           Expanded(
             child: TextField(
-              decoration: InputDecoration(
+              controller: _searchController,
+              onChanged: (_) => _updateStream(),
+              decoration: const InputDecoration(
                 hintText: 'Buscar ingredientes...',
                 border: InputBorder.none,
                 hintStyle: TextStyle(fontSize: 14),
@@ -281,11 +338,7 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: const Color(0xFF8B5E3C).withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Text('ID: ${ingredient.id}', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF8B5E3C), fontSize: 12)),
-                ),
+                const Icon(Icons.inventory_2_outlined, color: Color(0xFF8B5E3C), size: 20),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(ingredient.nombre, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4E342E)), maxLines: 1, overflow: TextOverflow.ellipsis),
