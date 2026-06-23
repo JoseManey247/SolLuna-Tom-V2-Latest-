@@ -45,7 +45,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: const Color(0xFF8B5E3C).withOpacity(0.7),
+                  color: const Color(0xFF8B5E3C).withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 20),
@@ -87,7 +87,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: active ? const Color(0xFF5D5D5D) : const Color(0xFFC4A484).withOpacity(0.5),
+            color: active ? const Color(0xFF5D5D5D) : const Color(0xFFC4A484).withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(
@@ -110,7 +110,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFC4A484).withOpacity(0.6),
+            color: const Color(0xFFC4A484).withValues(alpha: 0.6),
             borderRadius: BorderRadius.circular(12),
           ),
           child: DropdownButtonHideUnderline(
@@ -143,7 +143,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
                 height: 50,
                 margin: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFC4A484).withOpacity(0.6),
+                  color: const Color(0xFFC4A484).withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -183,7 +183,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
         decoration: InputDecoration(
           labelText: label,
           filled: true,
-          fillColor: Colors.white.withOpacity(0.5),
+          fillColor: Colors.white.withValues(alpha: 0.5),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
           labelStyle: const TextStyle(color: Color(0xFF8B5E3C)),
         ),
@@ -197,7 +197,7 @@ class _AddProductDialogState extends State<AddProductDialog> {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: const Color(0xFFC4A484).withOpacity(0.6),
+          color: const Color(0xFFC4A484).withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(icon, color: Colors.white),

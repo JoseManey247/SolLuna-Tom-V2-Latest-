@@ -279,7 +279,7 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFFD2B48C).withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFFD2B48C).withValues(alpha: 0.5)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -309,9 +309,9 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.5)),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Row(
           children: [
@@ -330,7 +330,7 @@ class _InventarioIngredientesScreenState extends State<InventarioIngredientesScr
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
-      color: Colors.white.withOpacity(0.9),
+      color: Colors.white.withValues(alpha: 0.9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey[200]!)),
       child: Padding(
         padding: const EdgeInsets.all(12),

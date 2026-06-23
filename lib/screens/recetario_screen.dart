@@ -143,7 +143,7 @@ class _RecetarioScreenState extends State<RecetarioScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: const Color(0xFFD2B48C).withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFFD2B48C).withValues(alpha: 0.5)),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -173,9 +173,9 @@ class _RecetarioScreenState extends State<RecetarioScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.2),
+          color: color.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.5)),
+          border: Border.all(color: color.withValues(alpha: 0.5)),
         ),
         child: Row(
           children: [
@@ -192,7 +192,7 @@ class _RecetarioScreenState extends State<RecetarioScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 0,
-      color: Colors.white.withOpacity(0.9),
+      color: Colors.white.withValues(alpha: 0.9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey[200]!)),
       child: InkWell(
         onTap: () => _showRecipeDetail(recipe),
@@ -204,7 +204,7 @@ class _RecetarioScreenState extends State<RecetarioScreen> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF8B5E3C).withOpacity(0.1),
+                  color: const Color(0xFF8B5E3C).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.menu_book_outlined, color: Color(0xFF8B5E3C), size: 30),
@@ -321,13 +321,13 @@ class _RecipeDetailSheet extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD2B48C).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFFD2B48C).withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: const Color(0xFFD2B48C).withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: const Color(0xFFD2B48C).withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
             child: Text(ing.fase, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF8B5E3C))),
           ),
           const SizedBox(width: 12),

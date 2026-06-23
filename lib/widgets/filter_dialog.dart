@@ -144,7 +144,7 @@ class _FilterDialogState extends State<FilterDialog> {
                 const SizedBox(width: 10),
                 Text(
                   'Filtrar por ...',
-                  style: TextStyle(fontSize: 22, color: const Color(0xFF8B5E3C).withOpacity(0.8), fontWeight: FontWeight.w500),
+                  style: TextStyle(fontSize: 22, color: const Color(0xFF8B5E3C).withValues(alpha: 0.8), fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -180,7 +180,7 @@ class _FilterDialogState extends State<FilterDialog> {
                 min: 0,
                 max: 100000,
                 activeColor: const Color(0xFF8B5E3C),
-                inactiveColor: const Color(0xFFD2B48C).withOpacity(0.5),
+                inactiveColor: const Color(0xFFD2B48C).withValues(alpha: 0.5),
                 onChanged: (val) => setState(() => _priceRange = val),
               ),
               Center(child: Text('\$${_priceRange.start.round()} - \$${_priceRange.end.round()}', style: const TextStyle(color: Color(0xFF8B5E3C)))),
@@ -257,10 +257,10 @@ class _FilterDialogState extends State<FilterDialog> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: active && isCurrentGroup ? const Color(0xFF8B5E3C) : const Color(0xFFC4A484).withOpacity(0.3),
+            color: active && isCurrentGroup ? const Color(0xFF8B5E3C) : const Color(0xFFC4A484).withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: active && isCurrentGroup ? const Color(0xFF8B5E3C) : const Color(0xFF8B5E3C).withOpacity(0.2),
+              color: active && isCurrentGroup ? const Color(0xFF8B5E3C) : const Color(0xFF8B5E3C).withValues(alpha: 0.2),
             ),
           ),
           child: Center(
@@ -270,7 +270,7 @@ class _FilterDialogState extends State<FilterDialog> {
                 Text(
                   displayLabel,
                   style: TextStyle(
-                    color: active ? Colors.white : const Color(0xFF8B5E3C).withOpacity(0.5),
+                    color: active ? Colors.white : const Color(0xFF8B5E3C).withValues(alpha: 0.5),
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                   ),
@@ -300,7 +300,7 @@ class _FilterDialogState extends State<FilterDialog> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: const Color(0xFFC4A484).withOpacity(0.8),
+            color: const Color(0xFFC4A484).withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Center(

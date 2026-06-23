@@ -136,7 +136,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -174,7 +174,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
           borderRadius: BorderRadius.circular(15),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF8B5E3C).withOpacity(0.3),
+              color: const Color(0xFF8B5E3C).withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -201,7 +201,7 @@ class _CatalogoScreenState extends State<CatalogoScreen> {
                 width: 100,
                 height: 100,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1E4D0).withOpacity(0.5),
+                  color: const Color(0xFFF1E4D0).withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: ClipRRect(
@@ -306,7 +306,7 @@ class ProductDetailView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(20),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 10,
                             )
                           ],
@@ -372,9 +372,9 @@ class ProductDetailView extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFD2B48C).withOpacity(0.2),
+        color: const Color(0xFFD2B48C).withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFD2B48C).withOpacity(0.5)),
+        border: Border.all(color: const Color(0xFFD2B48C).withValues(alpha: 0.5)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

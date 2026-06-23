@@ -4,6 +4,12 @@ import '../models/sale_record_model.dart';
 import '../services/product_service.dart';
 import '../services/sales_service.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:csv/csv.dart';
+import 'package:flutter/foundation.dart';
+import 'package:file_picker/file_picker.dart';
 
 extension StringExtension on String {
   String capitalize() {
@@ -27,8 +33,6 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
   final List<SaleItem> _currentSaleItems = [SaleItem()];
   List<Product> _availableProducts = [];
   bool _isLoadingProducts = true;
-
-  DateTimeRange? _selectedDateRange;
 
   @override
   void initState() {
@@ -251,18 +255,29 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
 
         final allSales = snapshot.data ?? [];
         
-        // Group sales by date
-        final Map<String, List<Map<String, dynamic>>> groupedSales = {};
+        // Group sales by Month, then by Day
+        final Map<String, Map<String, List<Map<String, dynamic>>>> groupedByMonth = {};
+        
         for (var sale in allSales) {
           final date = DateTime.parse(sale['created_at']).toLocal();
-          final dateStr = DateFormat('yyyy-MM-dd').format(date);
-          if (!groupedSales.containsKey(dateStr)) {
-            groupedSales[dateStr] = [];
+          final monthStr = DateFormat('MMMM yyyy', 'es_ES').format(date).capitalize();
+          final dayStr = DateFormat('yyyy-MM-dd').format(date);
+          
+          if (!groupedByMonth.containsKey(monthStr)) {
+            groupedByMonth[monthStr] = {};
           }
-          groupedSales[dateStr]!.add(sale);
+          if (!groupedByMonth[monthStr]!.containsKey(dayStr)) {
+            groupedByMonth[monthStr]![dayStr] = [];
+          }
+          groupedByMonth[monthStr]![dayStr]!.add(sale);
         }
 
-        final sortedDates = groupedSales.keys.toList()..sort((a, b) => b.compareTo(a));
+        final sortedMonths = groupedByMonth.keys.toList()..sort((a, b) {
+          // Sort months descending (parse back to compare properly)
+          final dateA = DateFormat('MMMM yyyy', 'es_ES').parse(a);
+          final dateB = DateFormat('MMMM yyyy', 'es_ES').parse(b);
+          return dateB.compareTo(dateA);
+        });
 
         return CustomScrollView(
           slivers: [
@@ -272,15 +287,26 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Registro de Ventas Diario', style: Theme.of(context).textTheme.titleLarge),
-                    const SizedBox(height: 8),
-                    Text('Acumulado por fecha', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Historial de Ventas', style: Theme.of(context).textTheme.titleLarge),
+                            const SizedBox(height: 4),
+                            Text('Agrupado por mes y día', style: TextStyle(color: Colors.grey[600], fontSize: 14)),
+                          ],
+                        ),
+                        _buildExportButton(allSales),
+                      ],
+                    ),
                     const SizedBox(height: 16),
                   ],
                 ),
               ),
             ),
-            if (sortedDates.isEmpty)
+            if (sortedMonths.isEmpty)
               const SliverFillRemaining(
                 child: Center(
                   child: Text('No hay ventas registradas', style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
@@ -290,68 +316,88 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final dateStr = sortedDates[index];
-                    final daySales = groupedSales[dateStr]!;
-                    final totalDay = daySales.fold(0, (sum, item) => sum + ((item['total_venta'] as num?)?.toInt() ?? 0));
-                    final dateObj = DateTime.parse(dateStr);
+                    final monthStr = sortedMonths[index];
+                    final daysInMonth = groupedByMonth[monthStr]!;
+                    final sortedDays = daysInMonth.keys.toList()..sort((a, b) => b.compareTo(a));
+                    
+                    int totalMonth = 0;
+                    daysInMonth.forEach((day, sales) {
+                      totalMonth += sales.fold(0, (sum, s) => sum + ((s['total_venta'] as num?)?.toInt() ?? 0));
+                    });
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 6),
-                      child: Card(
-                        elevation: 0,
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15), 
-                          side: BorderSide(color: Colors.grey[200]!),
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: const Color(0xFF8B5E3C).withValues(alpha: 0.1)),
                         ),
                         child: ExpansionTile(
+                          backgroundColor: Colors.transparent,
+                          collapsedBackgroundColor: Colors.transparent,
                           shape: const Border(),
-                          leading: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF8B5E3C).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Icon(Icons.calendar_today, color: Color(0xFF8B5E3C), size: 20),
+                          iconColor: const Color(0xFF8B5E3C),
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFF8B5E3C).withValues(alpha: 0.1),
+                            child: const Icon(Icons.calendar_month, color: Color(0xFF8B5E3C), size: 20),
                           ),
                           title: Text(
-                            DateFormat('EEEE dd/MM/yyyy', 'es_ES').format(dateObj).capitalize(),
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                            monthStr,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF4E342E)),
                           ),
-                          subtitle: Text('${daySales.length} ventas realizadas'),
-                          trailing: Text(
-                            '\$${NumberFormat('#,###', 'es_CL').format(totalDay)}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 18),
-                          ),
-                          children: daySales.map((sale) {
-                            final saleTime = DateTime.parse(sale['created_at']).toLocal();
-                            final prodName = sale['productos_terminados']['nombre'];
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                border: Border(top: BorderSide(color: Colors.grey[100]!)),
-                              ),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    DateFormat('HH:mm').format(saleTime),
-                                    style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold, fontSize: 12),
+                          subtitle: Text('\$${NumberFormat('#,###', 'es_CL').format(totalMonth)} acumulado'),
+                          children: sortedDays.map((dayStr) {
+                            final daySales = daysInMonth[dayStr]!;
+                            final dateObj = DateTime.parse(dayStr);
+                            final totalDay = daySales.fold(0, (sum, item) => sum + ((item['total_venta'] as num?)?.toInt() ?? 0));
+
+                            return Padding(
+                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                              child: Card(
+                                elevation: 0,
+                                color: const Color(0xFFFDF5E6),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(15),
+                                  side: BorderSide(color: Colors.grey[200]!),
+                                ),
+                                child: ExpansionTile(
+                                  shape: const Border(),
+                                  title: Text(
+                                    DateFormat('EEEE dd', 'es_ES').format(dateObj).capitalize(),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
                                   ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(prodName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                                        Text('${sale['cantidad_vendida']} unidades', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                                      ],
-                                    ),
+                                  trailing: Text(
+                                    '\$${NumberFormat('#,###', 'es_CL').format(totalDay)}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
                                   ),
-                                  Text(
-                                    '\$${NumberFormat('#,###', 'es_CL').format(sale['total_venta'])}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                ],
+                                  children: daySales.map((sale) {
+                                    final saleTime = DateTime.parse(sale['created_at']).toLocal();
+                                    final prodName = sale['productos_terminados']['nombre'];
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        border: Border(top: BorderSide(color: Colors.grey[100]!)),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Text(
+                                            DateFormat('HH:mm').format(saleTime),
+                                            style: TextStyle(color: Colors.grey[600], fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Text(prodName, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+                                          ),
+                                          Text(
+                                            '\$${NumberFormat('#,###', 'es_CL').format(sale['total_venta'])}',
+                                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                                ),
                               ),
                             );
                           }).toList(),
@@ -359,7 +405,7 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
                       ),
                     );
                   },
-                  childCount: sortedDates.length,
+                  childCount: sortedMonths.length,
                 ),
               ),
             const SliverToBoxAdapter(child: SizedBox(height: 40)),
@@ -367,6 +413,122 @@ class _VentasScreenState extends State<VentasScreen> with SingleTickerProviderSt
         );
       }
     );
+  }
+
+  Widget _buildExportButton(List<Map<String, dynamic>> allSales) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.file_download_outlined, color: Color(0xFF8B5E3C)),
+      tooltip: 'Exportar Reporte',
+      onSelected: (val) => _exportToCSV(val, allSales),
+      itemBuilder: (context) => [
+        const PopupMenuItem(value: 'diario', child: Text('Reporte Diario (Hoy)')),
+        const PopupMenuItem(value: 'semanal', child: Text('Reporte Semanal (Últ. 7 días)')),
+        const PopupMenuItem(value: 'mensual', child: Text('Reporte Mensual (Este mes)')),
+        const PopupMenuItem(value: 'anual', child: Text('Reporte Anual (Este año)')),
+        const PopupMenuItem(value: 'todo', child: Text('Todo el Historial')),
+      ],
+    );
+  }
+
+  Future<void> _exportToCSV(String range, List<Map<String, dynamic>> allSales) async {
+    final now = DateTime.now();
+    List<Map<String, dynamic>> filteredSales = [];
+    
+    switch (range) {
+      case 'diario':
+        filteredSales = allSales.where((s) => 
+          DateFormat('yyyy-MM-dd').format(DateTime.parse(s['created_at']).toLocal()) == 
+          DateFormat('yyyy-MM-dd').format(now)).toList();
+        break;
+      case 'semanal':
+        final weekAgo = now.subtract(const Duration(days: 7));
+        filteredSales = allSales.where((s) => DateTime.parse(s['created_at']).isAfter(weekAgo)).toList();
+        break;
+      case 'mensual':
+        filteredSales = allSales.where((s) {
+          final d = DateTime.parse(s['created_at']);
+          return d.year == now.year && d.month == now.month;
+        }).toList();
+        break;
+      case 'anual':
+        filteredSales = allSales.where((s) => DateTime.parse(s['created_at']).year == now.year).toList();
+        break;
+      default:
+        filteredSales = allSales;
+    }
+
+    if (filteredSales.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No hay datos para exportar en este periodo')));
+      }
+      return;
+    }
+
+    // Prepare data for CSV
+    List<List<dynamic>> rows = [];
+    rows.add(['Fecha', 'Hora', 'Producto', 'Cantidad', 'Total (\$)']);
+    
+    for (var sale in filteredSales) {
+      final date = DateTime.parse(sale['created_at']).toLocal();
+      rows.add([
+        DateFormat('dd/MM/yyyy').format(date),
+        DateFormat('HH:mm').format(date),
+        sale['productos_terminados']['nombre'],
+        sale['cantidad_vendida'],
+        sale['total_venta'],
+      ]);
+    }
+
+    String csvData = const ListToCsvConverter().convert(rows);
+    String fileName = "reporte_ventas_${range}_${DateFormat('yyyyMMdd').format(now)}.csv";
+
+    try {
+      if (!kIsWeb && Platform.isWindows) {
+        // --- LOGIC FOR PC (Windows) ---
+        String? outputFile = await FilePicker.platform.saveFile(
+          dialogTitle: 'Guardar Reporte de Ventas',
+          fileName: fileName,
+          type: FileType.custom,
+          allowedExtensions: ['csv'],
+        );
+
+        if (outputFile != null) {
+          final file = File(outputFile);
+          await file.writeAsString(csvData);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Reporte guardado con éxito'), backgroundColor: Colors.green),
+            );
+          }
+        }
+      } else {
+        // --- LOGIC FOR MOBILE (Android/iOS) ---
+        final directory = await getTemporaryDirectory();
+        final path = "${directory.path}/$fileName";
+        final file = File(path);
+        await file.writeAsString(csvData);
+
+        if (mounted) {
+          final result = await Share.shareXFiles(
+            [XFile(path)],
+            text: 'Reporte de Ventas SolLuna ($range)',
+            subject: 'Reporte de Ventas',
+          );
+
+          if (result.status == ShareResultStatus.success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Reporte exportado con éxito'), backgroundColor: Colors.green),
+            );
+          }
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al exportar reporte: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Widget _buildSaleItemRow(int index) {

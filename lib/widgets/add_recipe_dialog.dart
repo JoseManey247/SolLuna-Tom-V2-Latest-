@@ -151,7 +151,7 @@ class _AddRecipeDialogState extends State<AddRecipeDialog> {
                     
                     DropdownButtonFormField<int>(
                       decoration: const InputDecoration(labelText: 'Producto Final Vinculado', border: OutlineInputBorder()),
-                      value: _selectedProductId,
+                      initialValue: _selectedProductId,
                       items: _products.map((p) => DropdownMenuItem(value: p.id, child: Text(p.nombre))).toList(),
                       onChanged: (val) => setState(() => _selectedProductId = val),
                     ),
@@ -171,7 +171,7 @@ class _AddRecipeDialogState extends State<AddRecipeDialog> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF8B5E3C).withOpacity(0.1),
+                            color: const Color(0xFF8B5E3C).withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
